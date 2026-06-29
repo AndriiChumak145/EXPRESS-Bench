@@ -35,7 +35,7 @@ from src.habitat import (
 from src.geom import get_cam_intr, get_scene_bnds
 from src.vlm import VLM
 from src.tsdf import TSDFPlanner
-from gpt import gpt_4o_mini
+from gpt import ask_model
 from evaluation import score
 
 
@@ -124,7 +124,7 @@ def main(cfg):
         letters = list(regions_dict.keys())
         regions = list(regions_dict.values())
         ex_prompt = f"QUESTION: {question}\nREGION: "
-        regs = gpt_4o_mini(region_prompt, ex_prompt)
+        regs = ask_model(region_prompt, ex_prompt)
         regs = regs.split(",")
         regs_list = []
         for r in regs:
@@ -200,10 +200,10 @@ def main(cfg):
                 # Terminate exploration
                 ex_prompt = f"QUESTION: {question}"
                 img_path = f"{episode_data_dir}/{cnt_step}.png"
-                stop_explore = gpt_4o_mini(explore_prompt, ex_prompt, img_path)
+                stop_explore = ask_model(explore_prompt, ex_prompt, img_path)
                 if "yes" in stop_explore.lower():
                     ex_prompt = f"Q: {question}\nA: "
-                    gen_answer = gpt_4o_mini(answer_prompt, ex_prompt, img_path)
+                    gen_answer = ask_model(answer_prompt, ex_prompt, img_path)
                     gen_answer = gen_answer.replace("A:", "").strip()
                     logging.info(f"gen_answer: {gen_answer}")
                     find_answer = True
@@ -418,13 +418,13 @@ def main(cfg):
 
                 
         if not find_answer:
-            gen_answer = gpt_4o_mini(random_answer_prompt, question)
+            gen_answer = ask_model(random_answer_prompt, question)
             gen_answer = gen_answer.replace("A:", "").strip()
             logging.info(f"gen_answer: {gen_answer}")
 
         ex_prompt = f"Question: {question}\nAnswer: {answer}\nResponse: {gen_answer}\nYour mark: "
         img_path = os.path.join(episode_data_dir, f"{cnt_step}.png")
-        EAC = gpt_4o_mini(score_prompt, ex_prompt, img_path)
+        EAC = ask_model(score_prompt, ex_prompt, img_path)
 
         # Episode summary
         logging.info(f"\n== Episode Summary")
@@ -496,6 +496,7 @@ if __name__ == "__main__":
             logging.FileHandler(logging_path, mode="w"),
             logging.StreamHandler(),
         ],
+        force=True,
     )
 
     main(cfg)

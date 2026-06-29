@@ -33,6 +33,8 @@ def pose_normal_to_tsdf_real(pose):
 def make_simple_cfg(settings):
     # simulator backend
     sim_cfg = habitat_sim.SimulatorConfiguration()
+    if "scene_dataset" in settings:
+        sim_cfg.scene_dataset_config_file = settings["scene_dataset"]
     sim_cfg.scene_id = settings["scene"]
 
     # agent
@@ -54,6 +56,14 @@ def make_simple_cfg(settings):
     depth_sensor_spec.hfov = settings["hfov"]
 
     agent_cfg.sensor_specifications = [rgb_sensor_spec, depth_sensor_spec]
+    if "semantic_sensor" in settings and settings["semantic_sensor"]:
+        semantic_sensor_spec = habitat_sim.CameraSensorSpec()
+        semantic_sensor_spec.uuid = "semantic_sensor"
+        semantic_sensor_spec.sensor_type = habitat_sim.SensorType.SEMANTIC
+        semantic_sensor_spec.resolution = [settings["height"], settings["width"]]
+        semantic_sensor_spec.position = [0.0, settings["sensor_height"], 0.0]
+        semantic_sensor_spec.hfov = settings["hfov"]
+        agent_cfg.sensor_specifications.append(semantic_sensor_spec)
 
     return habitat_sim.Configuration(sim_cfg, [agent_cfg])
 

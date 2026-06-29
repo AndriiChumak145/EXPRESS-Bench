@@ -1,7 +1,7 @@
 seed: 42
-dataset_path: ./data/express-bench.json
+dataset_path: ./data/express-bench-subset.json
 scene_data_path: ./data
-output_dir: ./experiment_result
+output_dir: ./experiment_result_qwen_8B
 
 # Sensor
 rgb_sensor: True
