@@ -1,0 +1,52 @@
+black_pixel_ratio: 0.5
+camera_height: 1.5
+camera_tilt_deg: 0
+dataset_path: ./data/express-bench-subset.json
+depth_sensor: true
+gsv_F: 3
+gsv_T: 0.5
+hfov: 90
+img_height: 512
+img_width: 512
+init_clearance: 0.5
+margin_h_ratio: 0.6
+margin_w_ratio: 0.25
+max_step_room_size_ratio: 3
+min_random_init_steps: 2
+output_dir: ./outputs/gemma_thinking
+planner:
+  dist_T: 10
+  eps: 1
+  frontier_max_neighbors: 4
+  frontier_min_neighbors: 3
+  frontier_spacing: 1.5
+  max_dist_from_cur: 3
+  max_unexplored_check_frontier: 3
+  max_unoccupied_check_frontier: 1
+  max_val_check_frontier: 3
+  min_dist_from_cur: 0.5
+  smooth_sigma: 5
+  unexplored_T: 0.2
+  unoccupied_T: 2.0
+  val_T: 0.5
+  val_dir_T: 0.5
+rgb_sensor: true
+save_freq: 5
+save_obs: true
+scene_data_path: ./data
+seed: 42
+semantic_sensor: true
+tsdf_grid_size: 0.1
+visual_prompt:
+  cam_offset: 0.6
+  circle_radius: 18
+  cluster_threshold: 1.0
+  min_num_prompt_points: 2
+  min_points_for_clustering: 3
+  num_max_unoccupied: 300
+  num_prompt_points: 3
+  point_max_dist: 10
+  point_min_dist: 2
+vlm:
+  device: cuda:0
+  model_id: prism-dinosiglip+7b

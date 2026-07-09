@@ -1,4 +1,6 @@
 import numpy as np
+import re
+import math
 
 
 def score(results):
@@ -6,7 +8,26 @@ def score(results):
     for result in results:
         if result["path_len"] != float("inf"):
             EAC = result["EAC"].replace("Your mark:", "").strip()
-            grd, acc = float(EAC.split(",")[0]), int(EAC.split(",")[1])
+            try:
+                # To handle models that hallucinate text and put the score at the end:
+                # take the last non-empty line
+                lines = [line.strip() for line in EAC.split('\n') if line.strip()]
+                if not lines:
+                    raise ValueError("Empty output")
+                last_line = lines[-1]
+                
+                match = re.search(r'([0-9](?:\.[0-9]+)?)\s*[,/]\s*([0-9])', last_line)
+                if match:
+                    grd = float(match.group(1))
+                    acc = int(match.group(2))
+                else:
+                    print(f"WARNING: Could not extract score via regex for episode. Output was:\n{last_line}\nAssigning NaN.")
+                    grd = float('nan')
+                    acc = float('nan')
+            except Exception as e:
+                print(f"CRITICAL: Failed to parse EAC format. Assigning NaN. Error: {e}")
+                grd = float('nan')
+                acc = float('nan')
             C.append(grd*acc)
             C_star.append(acc)
             p_path.append(result["path_len"])

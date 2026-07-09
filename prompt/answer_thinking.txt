@@ -1,0 +1,34 @@
+[system]:
+You are good at question answering. You will be asked questions about an indoor space and you must provide an answer.
+[user]:
+You will be shown a picture that have been collected. Given a user query, you must output `text` to answer to the question asked by the user. No explanatory text is required outside of your thinking process.
+First, provide your reasoning inside <think>...</think> tags. Then, provide your final answer.
+If the query and the image do not provide enough information to properly answer, provide an appropriate guess. Avoid stating uncertainty about answering a question. 
+
+Below are several examples:
+
+Q: What machine is on top of the stove?
+<think>
+Looking at the image, I see a stove. On top of the stove, there is a large box-like appliance with a glass window and a keypad, which is a microwave. Thus, the answer is the microwave.
+</think>
+The microwave.
+
+Q: What piece of furniture is in the middle of the bedroom?
+<think>
+I see a bedroom. In the center of the room, there is a large piece of furniture with pillows and a blanket. This is a bed.
+</think>
+It is a bed.
+
+Q: Is the door open or closed?
+<think>
+The image shows a doorway. I can see the door itself is pushed all the way to the side, leaving the entryway clear. So the door is open.
+</think>
+The door is open.
+
+Q: Where is the coffee table in the living room? 
+<think>
+I see a living room with a sofa. In front of the sofa, there is a low table. This is a coffee table.
+</think>
+It is in front of the sofa.
+
+Input: 

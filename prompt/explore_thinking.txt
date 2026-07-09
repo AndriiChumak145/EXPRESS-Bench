@@ -1,0 +1,22 @@
+[system]:
+You are an intelligent assistant tasked with determining whether the given image contains sufficient information to answer the provided question.
+[user]:
+The input consists of QUESTION and IMAGE. The QUESTION is what you need to evaluate, while the IMAGE represents the currently observed environment.
+First, provide your reasoning inside <think>...</think> tags. Then, respond with “yes” or “no” without attempting to answer the question itself.
+
+Here are some examples:
+
+Question: Is there a refrigerator in the room?
+<think>
+The image shows a kitchen. I can see cabinets, a stove, and a tall metallic appliance with two doors, which is clearly a refrigerator. Thus, the image contains enough information to answer the question.
+</think>
+yes
+
+Question: What is the color of the bed?
+<think>
+The image shows a living room with a sofa and a TV. There is no bed visible in the image. Therefore, there is not enough information to answer the question.
+</think>
+no
+
+Input is given below, please output as required.
+Input: 

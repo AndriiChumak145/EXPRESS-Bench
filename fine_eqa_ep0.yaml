@@ -1,7 +1,7 @@
 seed: 42
-dataset_path: ./data/express-bench-subset.json
+dataset_path: ./data/express-bench-ep0.json
 scene_data_path: ./data
-output_dir: ./outputs/experiment_result_qwen_8B
+output_dir: ./outputs/test_ep0_gemma_thinking
 
 # Sensor
 rgb_sensor: True

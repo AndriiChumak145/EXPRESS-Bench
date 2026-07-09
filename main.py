@@ -50,10 +50,17 @@ def main(cfg):
     
     # Prompt
     region_prompt = "./prompt/region.txt"
-    explore_prompt = "./prompt/explore.txt"
-    answer_prompt = "./prompt/answer.txt"
     random_answer_prompt = "./prompt/random_answer.txt"
     score_prompt = "./prompt/evaluation.txt" 
+    
+    if os.environ.get("QWEN_THINKING", "0") == "1" or os.environ.get("GEMMA_THINKING", "0") == "1":
+        explore_prompt = "./prompt/explore_thinking.txt"
+        answer_prompt = "./prompt/answer_thinking.txt"
+    else:
+        explore_prompt = "./prompt/explore.txt"
+        answer_prompt = "./prompt/answer.txt"
+    
+    force_think = os.environ.get("QWEN_THINKING", "0") == "1" or os.environ.get("GEMMA_THINKING", "0") == "1"
 
     # Load dataset
     with open(cfg.dataset_path, 'r', encoding='utf-8') as file:
@@ -200,10 +207,12 @@ def main(cfg):
                 # Terminate exploration
                 ex_prompt = f"QUESTION: {question}"
                 img_path = f"{episode_data_dir}/{cnt_step}.png"
-                stop_explore = ask_model(explore_prompt, ex_prompt, img_path)
+                stop_explore = ask_model(explore_prompt, ex_prompt, img_path, force_think_tag=force_think)
+                logging.info(f"Stop explore reasoning: {stop_explore}")
                 if "yes" in stop_explore.lower():
+                    find_answer = True
                     ex_prompt = f"Q: {question}\nA: "
-                    gen_answer = ask_model(answer_prompt, ex_prompt, img_path)
+                    gen_answer = ask_model(answer_prompt, ex_prompt, img_path, force_think_tag=force_think)
                     gen_answer = gen_answer.replace("A:", "").strip()
                     logging.info(f"gen_answer: {gen_answer}")
                     find_answer = True
