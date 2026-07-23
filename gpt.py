@@ -6,13 +6,14 @@ import logging
 from PIL import Image
 
 import torch
-from transformers import Qwen3VLForConditionalGeneration, AutoProcessor, BitsAndBytesConfig, AutoModelForCausalLM
+from transformers import Qwen3VLForConditionalGeneration, AutoProcessor, BitsAndBytesConfig, AutoModelForCausalLM, Qwen3_5ForConditionalGeneration
 from qwen_vl_utils import process_vision_info
 
 # OpenAI API Key
 API_KEY = ""
 USE_LOCAL_QWEN = os.environ.get("USE_LOCAL_QWEN", "0") == "1"
 USE_LOCAL_GEMMA = os.environ.get("USE_LOCAL_GEMMA", "0") == "1"
+USE_LOCAL_VLLM = os.environ.get("USE_LOCAL_VLLM", "0") == "1"
 QWEN_QUANTIZATION = os.environ.get("QWEN_QUANTIZATION_OVERRIDE", "1") == "1"
 
 # QWEN_MODEL = "Qwen/Qwen3-VL-2B-Instruct"
@@ -26,16 +27,23 @@ def load_qwen():
     global QWEN_MODEL, QWEN_PROCESSOR
     if isinstance(QWEN_MODEL, str):
         model_name = QWEN_MODEL
+        
+        # Select the correct architecture class dynamically based on the model string!
+        if "3.6" in model_name:
+            ModelClass = Qwen3_5ForConditionalGeneration
+        else:
+            ModelClass = Qwen3VLForConditionalGeneration
+
         if QWEN_QUANTIZATION:
             print(f"Loading {model_name} into GPU with 8-bit quantization...")
             quantization_config = BitsAndBytesConfig(load_in_8bit=True)
-            QWEN_MODEL = Qwen3VLForConditionalGeneration.from_pretrained(
+            QWEN_MODEL = ModelClass.from_pretrained(
                 model_name, torch_dtype="auto", device_map="auto", quantization_config=quantization_config
             )
         else:
             print(f"Loading {model_name} into GPU with bfloat16 (NO quantization)...")
-            QWEN_MODEL = Qwen3VLForConditionalGeneration.from_pretrained(
-                model_name, torch_dtype=torch.bfloat16, device_map="auto"
+            QWEN_MODEL = ModelClass.from_pretrained(
+                model_name, torch_dtype="auto", device_map="auto"
             )
         QWEN_PROCESSOR = AutoProcessor.from_pretrained(model_name)
 
@@ -94,6 +102,13 @@ def qwen3_vl_ask(prompt_path, ex_prompt, img_path=None, force_think_tag=False, m
     output_text = QWEN_PROCESSOR.batch_decode(
         generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False
     )[0]
+    
+    del inputs
+    del generated_ids
+    del generated_ids_trimmed
+    import gc
+    gc.collect()
+    
     logging.info(f"QWEN Model raw output:\n{output_text}")
     print(f"RAW QWEN OUTPUT: {repr(output_text)}")
     if "</think>" in output_text:
@@ -111,7 +126,7 @@ def load_gemma():
         model_name = GEMMA_MODEL
         print(f"Loading {model_name} into GPU without quantization (E4B fits in VRAM)...")
         GEMMA_MODEL = AutoModelForCausalLM.from_pretrained(
-            model_name, torch_dtype=torch.float16, device_map="auto"
+            model_name, torch_dtype="auto", device_map="auto"
         )
         GEMMA_PROCESSOR = AutoProcessor.from_pretrained(model_name)
 
@@ -127,7 +142,8 @@ def gemma_ask(prompt_path, ex_prompt, img_path=None, force_think_tag=False, max_
     
     if img_path:
         content.insert(0, {"type": "image"})
-        images.append(Image.open(img_path).convert("RGB"))
+        with Image.open(img_path) as img:
+            images.append(img.convert("RGB"))
         
     messages = [
         {"role": "user", "content": [{"type": "text", "text": prompt_system}] + content}
@@ -155,6 +171,13 @@ def gemma_ask(prompt_path, ex_prompt, img_path=None, force_think_tag=False, max_
     output_text = GEMMA_PROCESSOR.batch_decode(
         generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False
     )[0]
+    
+    del inputs
+    del generated_ids
+    del generated_ids_trimmed
+    import gc
+    gc.collect()
+    
     logging.info(f"Model raw output:\n{output_text}")
     print(f"RAW GEMMA OUTPUT: {repr(output_text)}")
     
@@ -175,7 +198,7 @@ def gemma_ask(prompt_path, ex_prompt, img_path=None, force_think_tag=False, max_
     return output_text.strip()
 
 
-def gpt_4o_mini(prompt_path, ex_prompt, img_path=None):
+def gpt_4o_mini(prompt_path, ex_prompt, img_path=None, force_think_tag=False, max_new_tokens=2048):
     api_key = API_KEY
     if not api_key:
         raise ValueError("OpenAI API key is missing. Please provide an API key or set USE_LOCAL_QWEN=True to run locally.")
@@ -194,16 +217,47 @@ def gpt_4o_mini(prompt_path, ex_prompt, img_path=None):
         "messages": [
             {"role": "system", "content": prompt_system},
             {"role": "user", "content": content}
-        ]}
-    response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
+        ],
+        "max_tokens": max_new_tokens
+    }
+    response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload, timeout=120)
     output = response.json()
     return output["choices"][0]['message']["content"]
 
 
+def local_vllm_ask(prompt_path, ex_prompt, img_path=None, force_think_tag=False, max_new_tokens=2048):
+    # Determine model string (fallback to default if not set)
+    model_name = GEMMA_MODEL if isinstance(GEMMA_MODEL, str) else "nvidia/Gemma-4-31B-IT-NVFP4"
+    
+    headers = {
+        "Content-Type": "application/json"
+    }
+    prompt_system, prompt = prompt_make(prompt_path, ex_prompt)
+    content = [{"type": "text", "text": prompt}]
+    if img_path:
+        base64_image = encode_image(img_path)
+        content.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}})
+    payload = {
+        "model": model_name,       
+        "messages": [
+            {"role": "system", "content": prompt_system},
+            {"role": "user", "content": content}
+        ],
+        "max_tokens": max_new_tokens
+    }
+    response = requests.post("http://localhost:8000/v1/chat/completions", headers=headers, json=payload, timeout=120)
+    if response.status_code != 200:
+        raise ValueError(f"vLLM server error {response.status_code}: {response.text}")
+        
+    output = response.json()
+    return output["choices"][0]['message']["content"]
+
 def ask_model(prompt_path, ex_prompt, img_path=None, force_think_tag=False, max_new_tokens=2048):
-    if USE_LOCAL_GEMMA:
+    if USE_LOCAL_VLLM:
+        return local_vllm_ask(prompt_path, ex_prompt, img_path, force_think_tag, max_new_tokens)
+    elif USE_LOCAL_GEMMA:
         return gemma_ask(prompt_path, ex_prompt, img_path, force_think_tag, max_new_tokens)
     elif USE_LOCAL_QWEN:
         return qwen3_vl_ask(prompt_path, ex_prompt, img_path, force_think_tag, max_new_tokens)
     else:
-        return gpt_4o_mini(prompt_path, ex_prompt, img_path)
+        return gpt_4o_mini(prompt_path, ex_prompt, img_path, force_think_tag, max_new_tokens)

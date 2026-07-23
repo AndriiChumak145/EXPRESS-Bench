@@ -72,7 +72,33 @@ def main(cfg):
 
     # Run all questions
     results_all = []
-    for question_ind in tqdm(range(len(questions_data))):
+    start_ind = 0
+    
+    # Attempt to resume
+    if os.path.exists(os.path.join(output_dir, "results.pkl")):
+        with open(os.path.join(output_dir, "results.pkl"), "rb") as f:
+            results_all = pickle.load(f)
+        start_ind = len(questions_data)
+        logging.info(f"Full results.pkl exists. Skipping all {start_ind} questions.")
+    else:
+        for i in range(len(questions_data), 0, -1):
+            if os.path.exists(os.path.join(output_dir, f"results_{i}.pkl")):
+                try:
+                    with open(os.path.join(output_dir, f"results_{i}.pkl"), "rb") as f:
+                        results_all = pickle.load(f)
+                    start_ind = i
+                    logging.info(f"Resuming from question {start_ind}...")
+                    break
+                except Exception as e:
+                    logging.warning(f"Failed to load results_{i}.pkl: {e}. Trying previous.")
+    
+    for question_ind in tqdm(range(start_ind, len(questions_data)), initial=start_ind, total=len(questions_data)):
+        if question_ind - start_ind >= 25:
+            logging.info(f"Batch size limit of 25 reached. Saving progress for {len(results_all)} episodes and exiting.")
+            with open(os.path.join(output_dir, f"results_{question_ind}.pkl"), "wb") as f:
+                pickle.dump(results_all, f)
+            import sys
+            sys.exit(3)
 
         result = {"question_ind": question_ind}
         question_data = questions_data[question_ind]
