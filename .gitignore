@@ -1,0 +1,9 @@
+data
+outputs*
+experiment_result
+experiment_result_tokens
+
+__pycache__/
+tmp/
+experiment_result_pred_eqa_200
+videos
